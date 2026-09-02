@@ -318,7 +318,30 @@ REST_TOOLS = [
                 },
                 "flattenAssemblies": {
                     "type": "boolean",
-                    "description": "Flatten assembly structure on import",
+                    "description": (
+                        "Collapse the file's assembly hierarchy into a single Part "
+                        "Studio. Leave true for PCB and other rigid models; setting "
+                        "it false creates one assembly tab per subassembly, each "
+                        "with meaningless auto-generated mates."
+                    ),
+                    "default": True,
+                },
+                "importAppearances": {
+                    "type": "boolean",
+                    "description": "Keep colours and materials carried by the file",
+                    "default": True,
+                },
+                "extractAssemblyHierarchy": {
+                    "type": "boolean",
+                    "description": (
+                        "Rebuild the source assembly tree as Onshape assemblies. Only "
+                        "useful for a genuine multi-body mechanism, not a board."
+                    ),
+                    "default": False,
+                },
+                "createComposite": {
+                    "type": "boolean",
+                    "description": "Create a composite part from the imported solids",
                     "default": False,
                 },
                 "yAxisIsUp": {
@@ -382,12 +405,22 @@ async def _import_file(client, args: Dict[str, Any]) -> str:
     filename = os.path.basename(file_path)
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
+    # flattenAssemblies defaults on: a KiCad board STEP carries a deep
+    # component hierarchy, and importing it unflattened produces one assembly
+    # tab per subassembly, each full of auto-generated Revolute/Parallel mates
+    # that mean nothing for a rigid board.
     form: Dict[str, Any] = {
         "encodedFilename": filename,
         "fileContentLength": str(os.path.getsize(file_path)),
         "translate": str(bool(args.get("translate", True))).lower(),
-        "flattenAssemblies": str(bool(args.get("flattenAssemblies", False))).lower(),
+        "flattenAssemblies": str(bool(args.get("flattenAssemblies", True))).lower(),
         "yAxisIsUp": str(bool(args.get("yAxisIsUp", False))).lower(),
+        "importAppearances": str(bool(args.get("importAppearances", True))).lower(),
+        "extractAssemblyHierarchy": str(
+            bool(args.get("extractAssemblyHierarchy", False))
+        ).lower(),
+        "createComposite": str(bool(args.get("createComposite", False))).lower(),
+        "createDrawingIfPossible": "false",
         "storeInDocument": "true",
     }
     if args.get("unit"):
