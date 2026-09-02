@@ -22,6 +22,7 @@ https://cad.onshape.com/api/openapi, which needs no authentication.
 
 import json
 import os
+from urllib.parse import quote
 from typing import Any, Dict, List, Optional, Tuple
 
 from mcp.types import Tool
@@ -213,7 +214,13 @@ def build_path(
             if param.get("required", False):
                 missing.append(name)
             continue
-        path = path.replace("{" + name + "}", str(path_params[name]))
+        # Percent-encode: Onshape part ids legitimately contain "/" (e.g. "J/D").
+        # Substituted raw, such an id splits into extra path segments, which
+        # routes the request elsewhere and silently returns 204 without
+        # applying the write.
+        path = path.replace(
+            "{" + name + "}", quote(str(path_params[name]), safe="")
+        )
 
     if missing:
         raise ValueError(
