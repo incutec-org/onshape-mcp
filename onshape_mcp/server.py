@@ -36,6 +36,7 @@ from .builders.axis_helper import build_axis_sketch
 from .builders.boolean import BooleanBuilder, BooleanType
 from .analysis.interference import check_assembly_interference, format_interference_result
 from .analysis.positioning import get_assembly_positions, set_absolute_position, align_to_face
+from .rest import REST_TOOLS, REST_TOOL_NAMES, handle_rest_tool
 
 # Configure loguru to output to stderr
 logger.remove()  # Remove default handler
@@ -1428,7 +1429,7 @@ async def list_tools() -> list[Tool]:
                 "required": ["documentId", "workspaceId", "elementId", "instanceId", "faceId"],
             },
         ),
-    ]
+    ] + REST_TOOLS
 
 
 METERS_TO_INCHES = 1 / 0.0254
@@ -1593,6 +1594,16 @@ async def _create_mate(
 @app.call_tool()
 async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageContent]:
     """Handle tool calls."""
+
+    # Generic REST access covers every operation the hand-written tools miss.
+    if name in REST_TOOL_NAMES:
+        try:
+            text = await handle_rest_tool(name, arguments or {}, client)
+        except httpx.HTTPStatusError as e:
+            text = f"Onshape API error {e.response.status_code}: {e.response.text[:1000]}"
+        except (KeyError, ValueError) as e:
+            text = f"Error: {e}"
+        return [TextContent(type="text", text=text)]
 
     if name == "create_sketch_rectangle":
         try:
