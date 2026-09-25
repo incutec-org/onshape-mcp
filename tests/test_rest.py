@@ -484,7 +484,10 @@ async def test_import_file_missing_file_returns_message(rest_client):
 
 @pytest.mark.asyncio
 async def test_import_file_success_default_form_fields(tmp_path, rest_client):
-    src = tmp_path / "board.step"
+    # No extension at all, so mimetypes.guess_type is guaranteed (None, None)
+    # on every platform/mime.types database, which is what exercises the
+    # "application/octet-stream" fallback deterministically.
+    src = tmp_path / "board"
     src.write_bytes(b"step-file-bytes")
     rest_client.upload_multipart = AsyncMock(
         return_value={"id": "tid-1", "requestState": "ACTIVE"}
@@ -495,7 +498,7 @@ async def test_import_file_success_default_form_fields(tmp_path, rest_client):
         {"filePath": str(src), "documentId": "docABC", "workspaceId": "wsXYZ"},
     )
 
-    assert "Import started for board.step" in text
+    assert "Import started for board" in text
     assert "Translation ID: tid-1" in text
     assert "State: ACTIVE" in text
     assert "Document: docABC workspace wsXYZ" in text
@@ -506,7 +509,7 @@ async def test_import_file_success_default_form_fields(tmp_path, rest_client):
     path = call.args[0]
     assert path == f"{rest.DEFAULT_API_PREFIX}/translations/d/docABC/w/wsXYZ"
     form = call.kwargs["data"]
-    assert form["encodedFilename"] == "board.step"
+    assert form["encodedFilename"] == "board"
     assert form["fileContentLength"] == str(len(b"step-file-bytes"))
     assert form["translate"] == "true"
     assert form["flattenAssemblies"] == "true"
@@ -520,7 +523,7 @@ async def test_import_file_success_default_form_fields(tmp_path, rest_client):
 
     files = call.kwargs["files"]
     filename, payload, content_type = files["file"]
-    assert filename == "board.step"
+    assert filename == "board"
     assert payload == b"step-file-bytes"
     assert content_type == "application/octet-stream"
 
