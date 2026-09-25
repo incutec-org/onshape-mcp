@@ -163,21 +163,20 @@ def test_with_custom_fixture(custom_fixture):
 ## Continuous Integration
 
 Tests run automatically on:
-- Push to main/develop branches
-- Pull requests to main/develop
-- Multiple Python versions (3.10, 3.11, 3.12)
-- Multiple OS (Ubuntu, macOS, Windows)
+- Push to main and feature/** branches
+- Pull requests to main
+- Python 3.12 on Ubuntu (`.github/workflows/test.yml`)
 
 ### CI Workflow
 
 1. Checkout code
-2. Set up Python environment
+2. Set up Python 3.12
 3. Install dependencies
 4. Run linters (ruff)
-5. Run type checker (mypy)
+5. Run type checker (mypy, `continue-on-error: true` so it does not gate the job)
 6. Run tests with coverage
 7. Upload coverage to Codecov
-8. Check coverage threshold (80%)
+8. Check coverage threshold (80%, separate `coverage-check` job)
 
 ## Debugging Tests
 

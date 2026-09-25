@@ -20,8 +20,11 @@ The OpenAPI document ships alongside this module and is refreshable from
 https://cad.onshape.com/api/openapi, which needs no authentication.
 """
 
+import asyncio
 import json
+import mimetypes
 import os
+import time
 from urllib.parse import quote
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -398,10 +401,6 @@ REST_TOOL_NAMES = {t.name for t in REST_TOOLS}
 
 
 # --- runtime handlers ---------------------------------------------------
-
-import asyncio
-import mimetypes
-import time
 
 
 async def _import_file(client, args: Dict[str, Any]) -> str:
