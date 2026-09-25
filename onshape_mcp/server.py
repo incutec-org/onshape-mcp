@@ -5,16 +5,16 @@ import sys
 import asyncio
 from typing import Any
 import httpx
-from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent
 from loguru import logger
 
-# Load environment variables from .env file before local imports read them.
-# Look for .env in the package directory (where this server.py lives).
-_package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(_package_dir, ".env"))
+# Load credentials before local imports read them: environment first, then
+# the repository-root .env, then ~/.config/incutec/credentials.env.
+from .credentials import load_credentials
+
+load_credentials()
 
 from .api.client import OnshapeClient, OnshapeCredentials
 from .api.partstudio import PartStudioManager
@@ -36,6 +36,7 @@ from .builders.axis_helper import build_axis_sketch
 from .builders.boolean import BooleanBuilder, BooleanType
 from .analysis.interference import check_assembly_interference, format_interference_result
 from .analysis.positioning import get_assembly_positions, set_absolute_position, align_to_face
+from .rest import REST_TOOLS, REST_TOOL_NAMES, handle_rest_tool
 
 # Configure loguru to output to stderr
 logger.remove()  # Remove default handler
@@ -1428,7 +1429,7 @@ async def list_tools() -> list[Tool]:
                 "required": ["documentId", "workspaceId", "elementId", "instanceId", "faceId"],
             },
         ),
-    ]
+    ] + REST_TOOLS
 
 
 METERS_TO_INCHES = 1 / 0.0254
@@ -1593,6 +1594,16 @@ async def _create_mate(
 @app.call_tool()
 async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageContent]:
     """Handle tool calls."""
+
+    # Generic REST access covers every operation the hand-written tools miss.
+    if name in REST_TOOL_NAMES:
+        try:
+            text = await handle_rest_tool(name, arguments or {}, client)
+        except httpx.HTTPStatusError as e:
+            text = f"Onshape API error {e.response.status_code}: {e.response.text[:1000]}"
+        except (KeyError, ValueError) as e:
+            text = f"Error: {e}"
+        return [TextContent(type="text", text=text)]
 
     if name == "create_sketch_rectangle":
         try:

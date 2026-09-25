@@ -189,6 +189,114 @@ class OnshapeClient:
             return {}
         return response.json()
 
+    async def request_raw(
+        self,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Any] = None,
+        files: Optional[Any] = None,
+        data: Optional[Dict[str, Any]] = None,
+        accept: str = "application/json;charset=UTF-8; qs=0.09",
+        follow_redirects: bool = True,
+    ) -> httpx.Response:
+        """Make an arbitrary request and return the raw response.
+
+        This is the transport used by the generic REST tools. Unlike get/post/
+        delete it does not assume a JSON response body, so it also serves
+        binary downloads and multipart uploads.
+
+        Args:
+            method: HTTP method (GET, POST, DELETE, PUT, PATCH)
+            path: API endpoint path, already including the /api/vN prefix
+            params: Query parameters
+            json_body: JSON body, mutually exclusive with files/data
+            files: multipart file payload for httpx
+            data: multipart form fields, used alongside files
+            accept: Accept header value
+            follow_redirects: Onshape serves export payloads via a redirect
+
+        Returns:
+            The raw httpx response, not raised for status
+        """
+        url = f"{self.base_url}{path}"
+        headers = {
+            "Authorization": self._get_auth_header(),
+            "Accept": accept,
+        }
+        # Let httpx set the multipart boundary; forcing JSON here breaks uploads.
+        if json_body is not None and files is None:
+            headers["Content-Type"] = "application/json;charset=UTF-8; qs=0.09"
+
+        self._ensure_client()
+        logger.debug(f"{method.upper()} {url} params={self._sanitize_for_logging(params)}")
+        response = await self._client.request(
+            method.upper(),
+            url,
+            params=params,
+            json=json_body if files is None else None,
+            files=files,
+            data=data,
+            headers=headers,
+            follow_redirects=follow_redirects,
+        )
+        if response.status_code >= 400:
+            logger.error(
+                f"{method.upper()} {url} failed with status {response.status_code}: "
+                f"{response.text[:500]}"
+            )
+        return response
+
+    async def request_json(
+        self,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Any] = None,
+    ) -> Any:
+        """Make an arbitrary request and decode a JSON response."""
+        response = await self.request_raw(method, path, params=params, json_body=json_body)
+        response.raise_for_status()
+        if not response.content:
+            return {}
+        try:
+            return response.json()
+        except ValueError:
+            return {"_raw_text": response.text[:5000]}
+
+    async def request_binary(
+        self,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        accept: str = "*/*",
+    ) -> bytes:
+        """Fetch a binary payload, such as an exported STEP or STL file."""
+        response = await self.request_raw(
+            method, path, params=params, accept=accept
+        )
+        response.raise_for_status()
+        return response.content
+
+    async def upload_multipart(
+        self,
+        path: str,
+        files: Any,
+        data: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """POST a multipart/form-data payload, used for file import."""
+        response = await self.request_raw(
+            "POST", path, params=params, files=files, data=data
+        )
+        response.raise_for_status()
+        if not response.content:
+            return {}
+        try:
+            return response.json()
+        except ValueError:
+            return {"_raw_text": response.text[:5000]}
+
     async def close(self):
         """Close the HTTP client and clean up resources."""
         if self._client and self._own_client:

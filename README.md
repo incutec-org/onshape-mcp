@@ -51,11 +51,22 @@ export ONSHAPE_ACCESS_KEY="your_access_key"
 export ONSHAPE_SECRET_KEY="your_secret_key"
 ```
 
-Or create a `.env` file:
+Or put the same two lines in a file. The server looks up each variable in
+this order and takes the first match:
+
+| Order | Source |
+| --- | --- |
+| 1 | the process environment |
+| 2 | `.env` at the repository root (not inside `onshape_mcp/`) |
+| 3 | `~/.config/incutec/credentials.env`, or the file named by `INCUTEC_CREDENTIALS_FILE` |
+
 ```
 ONSHAPE_ACCESS_KEY=your_access_key
 ONSHAPE_SECRET_KEY=your_secret_key
 ```
+
+Keep the file mode `0600`. `mcp` stays pinned below 2: 2.x removed
+`Server.list_tools()`, which the server uses.
 
 ## Getting Onshape API Keys
 
