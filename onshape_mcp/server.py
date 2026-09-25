@@ -5,16 +5,16 @@ import sys
 import asyncio
 from typing import Any
 import httpx
-from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent
 from loguru import logger
 
-# Load environment variables from .env file before local imports read them.
-# Look for .env in the package directory (where this server.py lives).
-_package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(_package_dir, ".env"))
+# Load credentials before local imports read them: environment first, then
+# the repository-root .env, then ~/.config/incutec/credentials.env.
+from .credentials import load_credentials
+
+load_credentials()
 
 from .api.client import OnshapeClient, OnshapeCredentials
 from .api.partstudio import PartStudioManager
