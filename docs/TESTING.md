@@ -163,8 +163,8 @@ def test_with_custom_fixture(custom_fixture):
 ## Continuous Integration
 
 Tests run automatically on:
-- Push to main/develop branches
-- Pull requests to main/develop
+- Push to main and feature/** branches
+- Pull requests to main
 - Multiple Python versions (3.10, 3.11, 3.12)
 - Multiple OS (Ubuntu, macOS, Windows)
 

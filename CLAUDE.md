@@ -2,7 +2,7 @@
 
 ## Project Conventions
 
-- **PRs target `develop`**, never `main`. `main` is only for releases.
+- **PRs target `main`**, the only long-lived branch. Upstream changes arrive from the `upstream` remote (hedless/onshape-mcp) through a PR to `main`.
 - Tests: `pytest` (all tests must pass). Coverage: `pytest --cov`.
 - Style: `ruff check` and `ruff format --check`.
 

@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
-        ref: develop
+        ref: main
         fetch-depth: 0
 
     - name: Set up Python
